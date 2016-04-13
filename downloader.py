@@ -31,25 +31,34 @@ def getUrl(farm, date):
 	return '%s%f,%f,%s' % (base_url, farm['lat'], farm['lon'], date.__str__().replace(' ', 'T'))
 
 def writeToCSV(jsonObj, filePath):
-
 	try:
 		with open(filePath + '.csv', 'w', newline='') as csvfile:
 			writer = csv.writer(csvfile)
 			
-			head = True
+			head = []
 			for row in jsonObj['hourly']['data']:
-				buffer = []
 				
-				if head:
-					for attr in row:
-						buffer.append(attr)
-					head = False
-					writer.writerow(buffer)
-					buffer.clear()
-					
 				for attr in row:
-					buffer.append(row[attr])
-				writer.writerow(buffer)
+					if attr not in head:
+						head.append(attr)
+			
+			writer.writerow(head)
+			
+			writerBuffer = []
+			for row in jsonObj['hourly']['data']:
+				
+				buffer = []
+				for attr in head:
+				
+					if attr in row:
+						buffer.append(row[attr])
+					else:
+						buffer.append('')
+					
+				writerBuffer.append(buffer)
+				
+			for row in writerBuffer:
+				writer.writerow(row)
 		
 		print(' '.join([filePath, 'COMPLETED..']))
 	
@@ -67,7 +76,7 @@ def downloadData(url, filePath):
 
 # Main
 		
-with ThreadPoolExecutor(max_workers=16) as executor:
+with ThreadPoolExecutor(max_workers = 16) as executor:
 
 	for i in range(365):
 
@@ -83,7 +92,6 @@ with ThreadPoolExecutor(max_workers=16) as executor:
 			try:
 				if not os.path.exists(path): os.makedirs(path)
 				filePath = '\\'.join([path, date.__str__()[:10]])
-				
 				executor.submit(downloadData, url, filePath)
 			except Exception as e:
 				print('>>> query failed: \'%s\'' % (url))
